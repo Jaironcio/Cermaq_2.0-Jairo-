@@ -170,19 +170,19 @@ class ReporteCamaras(models.Model):
     
     # Río Pescado
     rio_pescado_tiene_incidencias = models.BooleanField(default=False)
-    rio_pescado_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    rio_pescado_descripcion = models.TextField(default='No se detectaron novedades durante el monitoreo')
     
     # Collín
     collin_tiene_incidencias = models.BooleanField(default=False)
-    collin_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    collin_descripcion = models.TextField(default='No se detectaron novedades durante el monitoreo')
     
     # Lican
     lican_tiene_incidencias = models.BooleanField(default=False)
-    lican_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    lican_descripcion = models.TextField(default='No se detectaron novedades durante el monitoreo')
     
     # Trafún
     trafun_tiene_incidencias = models.BooleanField(default=False)
-    trafun_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    trafun_descripcion = models.TextField(default='No se detectaron novedades durante el monitoreo')
     
     # Metadata
     creado_en = models.DateTimeField(auto_now_add=True)

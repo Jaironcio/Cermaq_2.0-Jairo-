@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const tieneIncidencias = centrosConIncidencias.length > 0;
             const badgeClass = tieneIncidencias ? 'badge-warning' : 'badge-success';
-            const badgeText = tieneIncidencias ? '⚠ Con Incidencias' : '✓ Sin Incidencias';
+            const badgeText = tieneIncidencias ? '⚠ Con Novedades' : '✓ Sin Novedades';
             
             html += `
                 <tr>
