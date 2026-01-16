@@ -1,0 +1,20 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Productividad del Equipo{% endblock %}
+{% block content %}
+<h1>👥 Productividad del Equipo</h1>
+<p class="dashboard-subtitle">Análisis del desempeño humano</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">👥</div><div class="metric-content"><h3>{{ operarios_nombres|length }}</h3><p>Operarios Activos</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-content"><h3 id="total-registros">0</h3><p>Total Registros</p></div></div>
+    <div class="metric-card"><div class="metric-icon">⏰</div><div class="metric-content"><h3>{{ incidencias_por_turno|length }}</h3><p>Turnos Activos</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📈</div><div class="metric-content"><h3>30</h3><p>Días Analizados</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>👥 Registros por Operario</h3><canvas id="chartOperarios"></canvas></div>
+    <div class="chart-card"><h3>⏰ Incidencias por Turno</h3><div style="padding: 20px;">
+        {% for turno in incidencias_por_turno %}<div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <strong>{{ turno.turno }}</strong><span style="background: #17a2b8; color: white; padding: 5px 15px; border-radius: 15px;">{{ turno.total }} incidencias</span></div>{% endfor %}
+    </div></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>new Chart(document.getElementById('chartOperarios'),{type:'bar',data:{labels:{{ operarios_nombres|safe }},datasets:[{label:'Registros',data:{{ operarios_totales|safe }},backgroundColor:'#17a2b8'}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y'}});</script>{% endblock %}

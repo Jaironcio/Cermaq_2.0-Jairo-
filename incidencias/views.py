@@ -14,7 +14,8 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count, Q, Avg # Quitamos 'F' que no se usa aquí
 from django.db.models.functions import TruncDate 
-from .serializers import IncidenciaSerializer 
+from .serializers import IncidenciaSerializer
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger 
 # ---
 
 # DATOS FIJOS DE MÓDULOS (Original)
@@ -249,11 +250,30 @@ def vista_reporte(request):
 
     todos_los_centros = Centro.objects.all().order_by('nombre')
     
+    # Paginación: 15 incidencias por página
+    paginator = Paginator(lista_de_incidencias, 15)
+    page = request.GET.get('page', 1)
+    
+    try:
+        incidencias_paginadas = paginator.page(page)
+    except PageNotAnInteger:
+        incidencias_paginadas = paginator.page(1)
+    except EmptyPage:
+        incidencias_paginadas = paginator.page(paginator.num_pages)
+    
+    centro_actual_slug = None
+    if filtro_centro:
+        centro_obj = Centro.objects.filter(id=filtro_centro).first()
+        if centro_obj:
+            centro_actual_slug = centro_obj.slug
+    
     contexto = {
-        'incidencias': lista_de_incidencias,
+        'incidencias': incidencias_paginadas,
         'centros': todos_los_centros,
         'filtros_aplicados': request.GET,
-        'es_admin': request.user.is_staff
+        'es_admin': request.user.is_staff,
+        'total_incidencias': paginator.count,
+        'centro_actual': centro_actual_slug,
     }
     
     return render(request, 'reporte.html', contexto)
@@ -455,3 +475,493 @@ def delete_incidencia_api(request, pk):
         incidencia.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+# --- VISTAS PARA CONTROL DIARIO ---
+@login_required
+def vista_control_diario_santa_juana(request):
+    """
+    Vista principal para el Control Diario de parámetros (Temp, pH, Oxígeno)
+    Versión simplificada sin consultas a la BD
+    """
+    if not request.user.is_staff:
+        return redirect('dashboard')
+    
+    from datetime import date
+    
+    # Buscar centro Santa Juana (si no existe, crear uno temporal)
+    centro_sj = Centro.objects.filter(slug='santa-juana').first()
+    
+    if not centro_sj:
+        # Crear un objeto temporal para evitar errores
+        class CentroTemp:
+            id = 'santa-juana'
+            nombre = 'Santa Juana'
+            slug = 'santa-juana'
+        centro_sj = CentroTemp()
+    
+    fecha_actual = date.today()
+    
+    contexto = {
+        'centro': centro_sj,
+        'fecha_actual': fecha_actual,
+        'anio_actual': fecha_actual.year,
+        'es_admin': request.user.is_staff
+    }
+    
+    return render(request, 'control_diario_santa_juana.html', contexto)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def guardar_control_diario_api(request):
+    """
+    API para guardar o actualizar un registro de Control Diario
+    Versión que verifica si la tabla existe antes de intentar guardar
+    """
+    from datetime import datetime
+    
+    if request.method == 'POST':
+        data = request.data
+        
+        try:
+            # Intentar importar el modelo
+            try:
+                from .models import ControlDiario
+            except ImportError:
+                return Response({
+                    'success': False,
+                    'message': 'El modelo ControlDiario no está disponible. Por favor, ejecuta las migraciones.'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
+            # Verificar si la tabla existe
+            from django.db import connection
+            table_name = 'cermaq_incidencias_incidencias_controldiario'
+            
+            with connection.cursor() as cursor:
+                cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+                if not cursor.fetchone():
+                    return Response({
+                        'success': False,
+                        'message': 'La tabla de Control Diario no existe. Por favor, ejecuta el script SQL: crear_tabla_control_diario.sql'
+                    }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
+            centro = Centro.objects.get(id=data.get('centro_id'))
+            fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d').date()
+            modulo = data.get('modulo', 'Hatchery')
+            
+            control, created = ControlDiario.objects.get_or_create(
+                centro=centro,
+                fecha=fecha,
+                modulo=modulo,
+                defaults={
+                    'anio': data.get('anio'),
+                    'semana': data.get('semana'),
+                    'dia': data.get('dia'),
+                    'responsable': data.get('responsable', ''),
+                }
+            )
+            
+            if not created:
+                control.anio = data.get('anio')
+                control.semana = data.get('semana')
+                control.dia = data.get('dia')
+                control.responsable = data.get('responsable', '')
+            
+            for hora in ['00', '04', '08', '12', '16', '20']:
+                for param in ['temp', 'ph', 'oxigeno']:
+                    field_name = f'hora_{hora}_{param}'
+                    value = data.get(field_name)
+                    if value:
+                        setattr(control, field_name, float(value))
+            
+            control.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Control diario guardado exitosamente',
+                'id': control.id,
+                'promedio_temp': str(control.promedio_temp) if control.promedio_temp else None,
+                'promedio_ph': str(control.promedio_ph) if control.promedio_ph else None,
+                'promedio_oxigeno': str(control.promedio_oxigeno) if control.promedio_oxigeno else None,
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error al guardar: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def obtener_control_diario_api(request):
+    """
+    API para obtener un registro de Control Diario por fecha
+    Versión que verifica si la tabla existe antes de consultar
+    """
+    from datetime import datetime
+    
+    fecha_str = request.GET.get('fecha')
+    centro_id = request.GET.get('centro_id')
+    modulo = request.GET.get('modulo', 'Hatchery')
+    
+    if not fecha_str or not centro_id:
+        return Response({'error': 'Faltan parámetros'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Intentar importar el modelo
+        try:
+            from .models import ControlDiario
+        except ImportError:
+            return Response({
+                'error': 'El modelo ControlDiario no está disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        # Verificar si la tabla existe
+        from django.db import connection
+        table_name = 'cermaq_incidencias_incidencias_controldiario'
+        
+        with connection.cursor() as cursor:
+            cursor.execute(f"SHOW TABLES LIKE '{table_name}'")
+            if not cursor.fetchone():
+                return Response({
+                    'error': 'La tabla de Control Diario no existe. Por favor, ejecuta el script SQL.'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        control = ControlDiario.objects.filter(
+            centro_id=centro_id,
+            fecha=fecha,
+            modulo=modulo
+        ).first()
+        
+        if control:
+            data = {
+                'id': control.id,
+                'fecha': str(control.fecha),
+                'anio': control.anio,
+                'semana': control.semana,
+                'dia': control.dia,
+                'responsable': control.responsable,
+                'modulo': control.modulo,
+            }
+            
+            for hora in ['00', '04', '08', '12', '16', '20']:
+                for param in ['temp', 'ph', 'oxigeno']:
+                    field_name = f'hora_{hora}_{param}'
+                    value = getattr(control, field_name)
+                    data[field_name] = str(value) if value else None
+            
+            data['promedio_temp'] = str(control.promedio_temp) if control.promedio_temp else None
+            data['promedio_ph'] = str(control.promedio_ph) if control.promedio_ph else None
+            data['promedio_oxigeno'] = str(control.promedio_oxigeno) if control.promedio_oxigeno else None
+            
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'No encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- VISTAS PARA REPORTE DE CÁMARAS ---
+@login_required
+def vista_reporte_camaras(request):
+    """
+    Vista principal para el Reporte de Cámaras
+    """
+    if not request.user.is_staff:
+        return redirect('dashboard')
+    
+    from datetime import date
+    
+    fecha_actual = date.today()
+    
+    contexto = {
+        'fecha_actual': fecha_actual,
+        'es_admin': request.user.is_staff
+    }
+    
+    return render(request, 'reporte_camaras.html', contexto)
+
+
+@csrf_exempt
+@api_view(['POST'])
+def guardar_reporte_camaras_api(request):
+    """
+    API para guardar o actualizar un reporte de cámaras
+    """
+    from datetime import datetime
+    
+    if request.method == 'POST':
+        data = request.data
+        
+        try:
+            try:
+                from .models import ReporteCamaras
+            except ImportError:
+                return Response({
+                    'success': False,
+                    'message': 'El modelo ReporteCamaras no está disponible. Por favor, ejecuta las migraciones.'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
+            fecha = datetime.strptime(data.get('fecha'), '%Y-%m-%d').date()
+            turno = data.get('turno')
+            responsable = data.get('responsable')
+            centros_data = data.get('centros', {})
+            
+            reporte, created = ReporteCamaras.objects.get_or_create(
+                fecha=fecha,
+                turno=turno,
+                defaults={
+                    'responsable': responsable,
+                }
+            )
+            
+            if not created:
+                reporte.responsable = responsable
+            
+            for centro_key, centro_info in centros_data.items():
+                field_incidencia = f'{centro_key}_tiene_incidencias'
+                field_descripcion = f'{centro_key}_descripcion'
+                
+                setattr(reporte, field_incidencia, centro_info.get('tiene_incidencias', False))
+                setattr(reporte, field_descripcion, centro_info.get('descripcion', ''))
+            
+            reporte.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Reporte de cámaras guardado exitosamente',
+                'id': reporte.id,
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error al guardar: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def obtener_reporte_camaras_api(request):
+    """
+    API para obtener un reporte de cámaras por fecha
+    """
+    from datetime import datetime
+    
+    fecha_str = request.GET.get('fecha')
+    
+    if not fecha_str:
+        return Response({'error': 'Falta el parámetro fecha'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        try:
+            from .models import ReporteCamaras
+        except ImportError:
+            return Response({
+                'error': 'El modelo ReporteCamaras no está disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        reporte = ReporteCamaras.objects.filter(fecha=fecha).first()
+        
+        if reporte:
+            data = {
+                'id': reporte.id,
+                'fecha': str(reporte.fecha),
+                'turno': reporte.turno,
+                'responsable': reporte.responsable,
+                'centros': {
+                    'rio_pescado': {
+                        'tiene_incidencias': reporte.rio_pescado_tiene_incidencias,
+                        'descripcion': reporte.rio_pescado_descripcion
+                    },
+                    'collin': {
+                        'tiene_incidencias': reporte.collin_tiene_incidencias,
+                        'descripcion': reporte.collin_descripcion
+                    },
+                    'lican': {
+                        'tiene_incidencias': reporte.lican_tiene_incidencias,
+                        'descripcion': reporte.lican_descripcion
+                    },
+                    'trafun': {
+                        'tiene_incidencias': reporte.trafun_tiene_incidencias,
+                        'descripcion': reporte.trafun_descripcion
+                    }
+                }
+            }
+            
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'No encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- VISTAS PARA CONSULTA DE REPORTES DE CÁMARAS ---
+@login_required
+def vista_consulta_reportes_camaras(request):
+    """
+    Vista para consultar y filtrar reportes de cámaras
+    """
+    if not request.user.is_staff:
+        return redirect('dashboard')
+    
+    return render(request, 'consulta_reportes_camaras.html')
+
+
+@csrf_exempt
+@api_view(['GET'])
+def listar_reportes_camaras_api(request):
+    """
+    API para listar reportes de cámaras con filtros
+    """
+    from datetime import datetime
+    
+    try:
+        try:
+            from .models import ReporteCamaras
+        except ImportError:
+            return Response({
+                'error': 'El modelo ReporteCamaras no está disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        # Obtener parámetros de filtro
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        turno_filtro = request.GET.get('turno')
+        responsable_filtro = request.GET.get('responsable')
+        centro_incidencias = request.GET.get('centro_incidencias')
+        
+        # Iniciar query
+        reportes = ReporteCamaras.objects.all()
+        
+        # Aplicar filtros
+        if fecha_desde:
+            reportes = reportes.filter(fecha__gte=fecha_desde)
+        
+        if fecha_hasta:
+            reportes = reportes.filter(fecha__lte=fecha_hasta)
+        
+        if turno_filtro:
+            reportes = reportes.filter(turno=turno_filtro)
+        
+        if responsable_filtro:
+            reportes = reportes.filter(responsable__icontains=responsable_filtro)
+        
+        if centro_incidencias:
+            field_name = f'{centro_incidencias}_tiene_incidencias'
+            filter_dict = {field_name: True}
+            reportes = reportes.filter(**filter_dict)
+        
+        # Ordenar por fecha descendente
+        reportes = reportes.order_by('-fecha', '-creado_en')
+        
+        # Serializar datos
+        reportes_data = []
+        for reporte in reportes:
+            reportes_data.append({
+                'id': reporte.id,
+                'fecha': str(reporte.fecha),
+                'turno': reporte.turno,
+                'responsable': reporte.responsable,
+                'rio_pescado_tiene_incidencias': reporte.rio_pescado_tiene_incidencias,
+                'collin_tiene_incidencias': reporte.collin_tiene_incidencias,
+                'lican_tiene_incidencias': reporte.lican_tiene_incidencias,
+                'trafun_tiene_incidencias': reporte.trafun_tiene_incidencias,
+                'creado_en': reporte.creado_en.isoformat(),
+            })
+        
+        return Response({
+            'success': True,
+            'reportes': reportes_data,
+            'total': len(reportes_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@csrf_exempt
+@api_view(['GET'])
+def detalle_reporte_camaras_api(request, pk):
+    """
+    API para obtener el detalle completo de un reporte de cámaras
+    """
+    try:
+        try:
+            from .models import ReporteCamaras
+        except ImportError:
+            return Response({
+                'error': 'El modelo ReporteCamaras no está disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        reporte = ReporteCamaras.objects.filter(id=pk).first()
+        
+        if reporte:
+            data = {
+                'id': reporte.id,
+                'fecha': str(reporte.fecha),
+                'turno': reporte.turno,
+                'responsable': reporte.responsable,
+                'rio_pescado_tiene_incidencias': reporte.rio_pescado_tiene_incidencias,
+                'rio_pescado_descripcion': reporte.rio_pescado_descripcion,
+                'collin_tiene_incidencias': reporte.collin_tiene_incidencias,
+                'collin_descripcion': reporte.collin_descripcion,
+                'lican_tiene_incidencias': reporte.lican_tiene_incidencias,
+                'lican_descripcion': reporte.lican_descripcion,
+                'trafun_tiene_incidencias': reporte.trafun_tiene_incidencias,
+                'trafun_descripcion': reporte.trafun_descripcion,
+                'creado_en': reporte.creado_en.isoformat(),
+                'actualizado_en': reporte.actualizado_en.isoformat(),
+            }
+            
+            return Response(data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Reporte no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@csrf_exempt
+@api_view(['DELETE'])
+def eliminar_reporte_camaras_api(request, pk):
+    """
+    API para eliminar un reporte de cámaras
+    """
+    try:
+        try:
+            from .models import ReporteCamaras
+        except ImportError:
+            return Response({
+                'error': 'El modelo ReporteCamaras no está disponible'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
+        reporte = ReporteCamaras.objects.filter(id=pk).first()
+        
+        if reporte:
+            reporte.delete()
+            return Response({
+                'success': True,
+                'message': 'Reporte eliminado exitosamente'
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': 'Reporte no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+            
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)

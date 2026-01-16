@@ -18,28 +18,31 @@
 
         <div class="form-container" id="reporte-container"> 
             
-            <header class="reporte-header">
-                
-                {% csrf_token %} <div class="header-content">
-                    <img src="{% static 'imagenes/logo-pestaña.png' %}" alt="Logo Cermaq Chile" class="form-logo">
-                    <div class="header-info">
-                        <h1 id="reporteTitulo">📋 Reporte de Incidencias</h1>
-                        <div class="header-meta">
-                            <div class="fecha-info">
-                                <span class="fecha-label">📅 Fecha del Reporte:</span>
-                                <span id="reporteFecha" class="fecha-value">--/--/----</span>
-                            </div>
+            <header class="reporte-header-premium">
+                {% csrf_token %}
+                <div class="header-top-bar">
+                    <div class="logo-section">
+                        <img src="{% static 'imagenes/logo-pestaña.png' %}" alt="Logo Cermaq Chile" class="header-logo">
+                        <div class="header-title-group">
+                            <h1 id="reporteTitulo">📋 Reporte de Incidencias</h1>
+                            <p class="header-subtitle">Sistema de Gestión y Monitoreo</p>
                         </div>
                     </div>
-                </div>
-                <div class="header-stats" id="headerStats">
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalIncidenciasHeader">{{ incidencias|length }}</div>
-                        <div class="stat-label">Total Incidencias</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="incidenciasFiltradasHeader">{{ incidencias|length }}</div>
-                        <div class="stat-label">Incidencias Mostradas</div>
+                    <div class="header-stats-premium">
+                        <div class="stat-card stat-total">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalIncidenciasHeader">{{ total_incidencias }}</div>
+                                <div class="stat-label">Total Registradas</div>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-page">
+                            <div class="stat-icon">📄</div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="incidenciasFiltradasHeader">{{ incidencias|length }}</div>
+                                <div class="stat-label">En esta Página</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -113,43 +116,185 @@
                 <div id="incidenciasReporteContainer" class="incidencias-grid">
                     
                     {% for inc in incidencias %}
-                    <div class="incidencia-card" 
+                    <div class="incidencia-card-premium {% if inc.tiempo_resolucion %}{% if inc.tiempo_resolucion <= 20 %}kpi-excelente{% elif inc.tiempo_resolucion <= 30 %}kpi-aceptable{% else %}kpi-critico{% endif %}{% endif %}" 
                          data-centro="{{ inc.centro.id }}" 
                          data-turno="{{ inc.turno }}" 
                          data-tipo="{{ inc.tipo_incidencia }}" 
                          data-fecha="{{ inc.fecha_hora|date:"Y-m-d" }}">
                         
-                        {% if inc.centro %}
-                            <h3 class="card-center-title">{{ inc.centro.nombre }}</h3>
-                        {% else %}
-                            <h3 class="card-center-title">Centro no especificado</h3>
+                        <!-- Barra Superior con KPI -->
+                        <div class="card-kpi-bar {% if inc.tiempo_resolucion %}{% if inc.tiempo_resolucion <= 20 %}bar-excelente{% elif inc.tiempo_resolucion <= 30 %}bar-aceptable{% else %}bar-critico{% endif %}{% else %}bar-sin-dato{% endif %}">
+                            <div class="kpi-info">
+                                <span class="kpi-label">TIEMPO DE RESPUESTA</span>
+                                <span class="kpi-value">
+                                    {% if inc.tiempo_resolucion %}
+                                        {{ inc.tiempo_resolucion }} min
+                                        {% if inc.tiempo_resolucion <= 20 %}
+                                            <span class="kpi-status">✓ Cumple KPI</span>
+                                        {% elif inc.tiempo_resolucion <= 30 %}
+                                            <span class="kpi-status">⚠ Fuera de KPI</span>
+                                        {% else %}
+                                            <span class="kpi-status">✗ Crítico</span>
+                                        {% endif %}
+                                    {% else %}
+                                        Sin registro
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Header Principal -->
+                        <div class="card-header-premium">
+                            <div class="centro-badge">
+                                <span class="centro-icon">🏢</span>
+                                <span class="centro-nombre">{% if inc.centro %}{{ inc.centro.nombre }}{% else %}Centro no especificado{% endif %}</span>
+                            </div>
+                            <div class="fecha-badge">
+                                <span class="fecha-icon">📅</span>
+                                <span class="fecha-valor">{{ inc.fecha_hora|date:"d/m/Y" }}</span>
+                                <span class="hora-valor">{{ inc.fecha_hora|date:"H:i" }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección de Ubicación y Turno -->
+                        <div class="card-ubicacion-section">
+                            <div class="ubicacion-item">
+                                <span class="ubi-icon">📍</span>
+                                <div class="ubi-content">
+                                    <span class="ubi-label">Módulo</span>
+                                    <span class="ubi-value">{{ inc.modulo|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="ubicacion-item">
+                                <span class="ubi-icon">🎯</span>
+                                <div class="ubi-content">
+                                    <span class="ubi-label">Estanque</span>
+                                    <span class="ubi-value">{{ inc.estanque|default:"N/A" }}</span>
+                                </div>
+                            </div>
+                            <div class="ubicacion-item">
+                                <span class="ubi-icon">🕐</span>
+                                <div class="ubi-content">
+                                    <span class="ubi-label">Turno</span>
+                                    <span class="ubi-value">{{ inc.turno }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tipo de Incidencia y Sistema -->
+                        <div class="card-sistema-section">
+                            <div class="sistema-badge tipo-{{ inc.tipo_incidencia }}">
+                                <span class="sistema-icon">⚙️</span>
+                                <span class="sistema-text">{{ inc.tipo_incidencia|upper|default:"SISTEMA" }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Clasificación de Falla (Destacada) -->
+                        <div class="card-falla-principal">
+                            <div class="falla-icon">⚠️</div>
+                            <div class="falla-content">
+                                <span class="falla-label">TIPO DE FALLA</span>
+                                <span class="falla-descripcion">{{ inc.tipo_incidencia_normalizada|default:"Sin clasificación específica" }}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Parámetros Técnicos Mejorados -->
+                        {% if inc.oxigeno_valor or inc.temperatura_valor or inc.conductividad_nivel or inc.turbidez_valor or inc.sensor_valor %}
+                        <div class="card-parametros-premium">
+                            <div class="parametros-header">
+                                <span class="param-icon">📊</span>
+                                <span class="param-title">PARÁMETROS MEDIDOS</span>
+                            </div>
+                            <div class="parametros-list">
+                                {% if inc.oxigeno_valor %}
+                                    <div class="param-item param-oxigeno">
+                                        <span class="param-name">💧 Oxígeno</span>
+                                        <span class="param-val">{{ inc.oxigeno_valor }} mg/L</span>
+                                        {% if inc.oxigeno_nivel %}<span class="param-nivel nivel-{{ inc.oxigeno_nivel|lower }}">{{ inc.oxigeno_nivel }}</span>{% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if inc.temperatura_valor %}
+                                    <div class="param-item param-temperatura">
+                                        <span class="param-name">🌡️ Temperatura</span>
+                                        <span class="param-val">{{ inc.temperatura_valor }}°C</span>
+                                        {% if inc.temperatura_nivel %}<span class="param-nivel nivel-{{ inc.temperatura_nivel|lower }}">{{ inc.temperatura_nivel }}</span>{% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if inc.conductividad_nivel %}
+                                    <div class="param-item param-conductividad">
+                                        <span class="param-name">⚡ Conductividad</span>
+                                        <span class="param-val">{{ inc.conductividad_nivel }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if inc.turbidez_valor %}
+                                    <div class="param-item param-turbidez">
+                                        <span class="param-name">🌫️ Turbidez</span>
+                                        <span class="param-val">{{ inc.turbidez_valor }}</span>
+                                        {% if inc.turbidez_nivel %}<span class="param-nivel">{{ inc.turbidez_nivel }}</span>{% endif %}
+                                    </div>
+                                {% endif %}
+                                {% if inc.sensor_valor and inc.tipo_incidencia == "sensores" %}
+                                    <div class="param-item param-sensor">
+                                        <span class="param-name">📡 {{ inc.sensor_detectado }}</span>
+                                        <span class="param-val">{{ inc.sensor_valor }}</span>
+                                        {% if inc.sensor_nivel %}<span class="param-nivel">{{ inc.sensor_nivel }}</span>{% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
                         {% endif %}
                         
-                        <p><strong>Fecha:</strong> {{ inc.fecha_hora|date:"d/m/Y H:i" }}</p>
-                        <p><strong>Turno:</strong> {{ inc.turno }}</p>
-                        <p><strong>Tipo:</strong> {{ inc.tipo_incidencia|capfirst|default:"N/A" }}</p>
-                        <p><strong>Módulo:</strong> {{ inc.modulo|default:"N/A" }}</p>
-                        <p><strong>Estanque:</strong> {{ inc.estanque|default:"N/A" }}</p>
+                        <!-- Riesgos Identificados -->
+                        <div class="card-riesgos-section">
+                            <div class="riesgo-item {% if inc.riesgo_peces %}riesgo-activo{% endif %}">
+                                <span class="riesgo-icon">🐟</span>
+                                <span class="riesgo-text">Riesgo Peces</span>
+                                <span class="riesgo-estado">{% if inc.riesgo_peces %}SÍ{% else %}NO{% endif %}</span>
+                            </div>
+                            <div class="riesgo-item {% if inc.perdida_economica %}riesgo-activo{% endif %}">
+                                <span class="riesgo-icon">💰</span>
+                                <span class="riesgo-text">Pérdida Económica</span>
+                                <span class="riesgo-estado">{% if inc.perdida_economica %}SÍ{% else %}NO{% endif %}</span>
+                            </div>
+                            <div class="riesgo-item {% if inc.riesgo_personas %}riesgo-activo{% endif %}">
+                                <span class="riesgo-icon">👷</span>
+                                <span class="riesgo-text">Riesgo Personas</span>
+                                <span class="riesgo-estado">{% if inc.riesgo_personas %}SÍ{% else %}NO{% endif %}</span>
+                            </div>
+                        </div>
                         
+                        <!-- Operario Responsable -->
                         {% if inc.operario_contacto %}
-                            <p><strong>Operario:</strong> {{ inc.operario_contacto.nombre }}</p>
-                        {% else %}
-                            <p><strong>Operario:</strong> N/A</p>
+                        <div class="card-operario-section">
+                            <div class="operario-avatar">👤</div>
+                            <div class="operario-datos">
+                                <span class="operario-label">Operario de Contacto</span>
+                                <span class="operario-nombre">{{ inc.operario_contacto.nombre }}</span>
+                            </div>
+                        </div>
                         {% endif %}
                         
-                        <p><strong>Clasificación:</strong> {{ inc.tipo_incidencia_normalizada|default:"N/A" }}</p>
-
-{% if inc.tiempo_resolucion %}
-    <p><strong>T. Resolución:</strong> {{ inc.tiempo_resolucion }} min.</p>
-{% else %}
-    <p><strong>T. Resolución:</strong> N/A</p>
-{% endif %}
-<p><strong>Observación:</strong> {{ inc.observacion|truncatewords:15|default:"Sin observación" }}</p>
+                        <!-- Observaciones -->
+                        {% if inc.observacion %}
+                        <div class="card-observacion-section">
+                            <div class="obs-header">
+                                <span class="obs-icon">💬</span>
+                                <span class="obs-title">Observaciones</span>
+                            </div>
+                            <p class="obs-text">{{ inc.observacion }}</p>
+                        </div>
+                        {% endif %}
 
                         {% if es_admin %}
-                        <div class="card-actions">
-                            <a href="{% url 'editar_incidencia' inc.pk %}" class="edit-btn">Editar</a>
-                            <button type="button" class="delete-btn" data-id="{{ inc.id }}">Eliminar</button>
+                        <div class="card-actions-premium">
+                            <a href="{% url 'editar_incidencia' inc.pk %}" class="btn-action btn-edit">
+                                <span class="btn-icon">✏️</span>
+                                <span class="btn-text">Editar</span>
+                            </a>
+                            <button type="button" class="btn-action btn-delete" data-id="{{ inc.id }}">
+                                <span class="btn-icon">🗑️</span>
+                                <span class="btn-text">Eliminar</span>
+                            </button>
                         </div>
                         {% endif %}
 
@@ -159,6 +304,48 @@
                     {% endfor %}
 
                 </div>
+
+                <!-- Paginación -->
+                {% if incidencias.has_other_pages %}
+                <nav class="pagination-container" style="margin-top: 20px; text-align: center;">
+                    <ul style="list-style: none; padding: 0; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap;">
+                        {% if incidencias.has_previous %}
+                            <li>
+                                <a href="?page=1{% if filtros_aplicados.fecha %}&fecha={{ filtros_aplicados.fecha }}{% endif %}{% if filtros_aplicados.turno %}&turno={{ filtros_aplicados.turno }}{% endif %}{% if filtros_aplicados.centro %}&centro={{ filtros_aplicados.centro }}{% endif %}{% if filtros_aplicados.tipo %}&tipo={{ filtros_aplicados.tipo }}{% endif %}" 
+                                   style="padding: 8px 12px; background: #1a8a8a; color: white; text-decoration: none; border-radius: 5px;">
+                                    « Primera
+                                </a>
+                            </li>
+                            <li>
+                                <a href="?page={{ incidencias.previous_page_number }}{% if filtros_aplicados.fecha %}&fecha={{ filtros_aplicados.fecha }}{% endif %}{% if filtros_aplicados.turno %}&turno={{ filtros_aplicados.turno }}{% endif %}{% if filtros_aplicados.centro %}&centro={{ filtros_aplicados.centro }}{% endif %}{% if filtros_aplicados.tipo %}&tipo={{ filtros_aplicados.tipo }}{% endif %}" 
+                                   style="padding: 8px 12px; background: #1a8a8a; color: white; text-decoration: none; border-radius: 5px;">
+                                    ‹ Anterior
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li style="padding: 8px 15px; background: #e0e0e0; border-radius: 5px; font-weight: bold;">
+                            Página {{ incidencias.number }} de {{ incidencias.paginator.num_pages }}
+                        </li>
+
+                        {% if incidencias.has_next %}
+                            <li>
+                                <a href="?page={{ incidencias.next_page_number }}{% if filtros_aplicados.fecha %}&fecha={{ filtros_aplicados.fecha }}{% endif %}{% if filtros_aplicados.turno %}&turno={{ filtros_aplicados.turno }}{% endif %}{% if filtros_aplicados.centro %}&centro={{ filtros_aplicados.centro }}{% endif %}{% if filtros_aplicados.tipo %}&tipo={{ filtros_aplicados.tipo }}{% endif %}" 
+                                   style="padding: 8px 12px; background: #1a8a8a; color: white; text-decoration: none; border-radius: 5px;">
+                                    Siguiente ›
+                                </a>
+                            </li>
+                            <li>
+                                <a href="?page={{ incidencias.paginator.num_pages }}{% if filtros_aplicados.fecha %}&fecha={{ filtros_aplicados.fecha }}{% endif %}{% if filtros_aplicados.turno %}&turno={{ filtros_aplicados.turno }}{% endif %}{% if filtros_aplicados.centro %}&centro={{ filtros_aplicados.centro }}{% endif %}{% if filtros_aplicados.tipo %}&tipo={{ filtros_aplicados.tipo }}{% endif %}" 
+                                   style="padding: 8px 12px; background: #1a8a8a; color: white; text-decoration: none; border-radius: 5px;">
+                                    Última »
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
             </section>
         </div>
 
@@ -178,6 +365,11 @@
             <button class="action-primary action-primary-green" id="exportPdfBtn">🖨️ Generar PDF</button>
         </div>
             
+            <div class="action-group">
+                <span>Control de Parámetros</span>
+                <button onclick="window.location.href='{% url 'control_diario_santa_juana' %}'">📊 Control Diario</button>
+            </div>
+
             <div class="action-group">
                 <span>Dashboards</span>
                 <button onclick="window.location.href='{% url 'dashboard' %}'">📈 General</button>

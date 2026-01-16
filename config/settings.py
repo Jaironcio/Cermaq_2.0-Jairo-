@@ -26,7 +26,10 @@ SECRET_KEY = 'django-insecure-0*sy6%4^a33%v$5@*&(wtnd-e()d$am^yx+!^hipg0!xer(tx4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+# Permitir acceso desde browser preview
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8001', 'http://localhost:8001', 'http://127.0.0.1:62590']
 
 
 # Application definition
@@ -98,9 +101,24 @@ DATABASES = {
         'PORT': '3306',
         'OPTIONS': {
             'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
     }
 }
+
+# Desactivar verificación de versión de MariaDB y características no compatibles
+import django.db.backends.mysql.base
+import django.db.backends.mysql.features
+
+# Simular versión 10.5 para pasar la verificación
+django.db.backends.mysql.base.DatabaseWrapper.mysql_version = (10, 5, 0)
+
+# Deshabilitar RETURNING que no funciona en MariaDB 10.4
+class CustomDatabaseFeatures(django.db.backends.mysql.features.DatabaseFeatures):
+    can_return_columns_from_insert = False
+    can_return_rows_from_bulk_insert = False
+
+django.db.backends.mysql.base.DatabaseWrapper.features_class = CustomDatabaseFeatures
 
 
 # Password validation

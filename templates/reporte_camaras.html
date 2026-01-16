@@ -1,0 +1,510 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de Cámaras - Control Total</title>
+    <link rel="icon" type="image/png" href="{% static 'imagenes/logo-pestaña.png' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            background: #f0f2f5;
+            font-size: 16px;
+        }
+        
+        .header-control {
+            background: #17a2b8;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header-title {
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-salir {
+            background: #dc3545;
+            padding: 10px 20px;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .btn-salir:hover {
+            background: #c82333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .reporte-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .reporte-header {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .reporte-header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .reporte-header p {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+        
+        .reporte-info {
+            padding: 25px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .info-label {
+            font-size: 13px;
+            color: #6c757d;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        
+        .info-value {
+            font-size: 17px;
+            color: #212529;
+            font-weight: 600;
+        }
+        
+        .turno-horario {
+            font-size: 14px;
+            color: #495057;
+            font-weight: 500;
+            margin-top: 3px;
+        }
+        
+        .info-value input,
+        .info-value select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .centros-grid {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+        }
+        
+        .centro-card {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        
+        .centro-card:hover {
+            border-color: #17a2b8;
+            box-shadow: 0 4px 12px rgba(23,162,184,0.15);
+        }
+        
+        .centro-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .centro-icon {
+            font-size: 28px;
+        }
+        
+        .centro-nombre {
+            font-size: 22px;
+            font-weight: 700;
+            color: #212529;
+        }
+        
+        .centro-status {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .status-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .status-option:hover {
+            background: #e9ecef;
+        }
+        
+        .status-option input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .status-option label {
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .incidencia-input {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .incidencia-input.active {
+            display: block;
+        }
+        
+        .incidencia-input textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .incidencia-input textarea:focus {
+            outline: none;
+            border-color: #17a2b8;
+            box-shadow: 0 0 0 3px rgba(23,162,184,0.1);
+        }
+        
+        .acciones-footer {
+            padding: 25px 30px;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn-accion {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .btn-guardar {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-guardar:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+        }
+        
+        .btn-pdf {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-pdf:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+        }
+        
+        .btn-captura {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-captura:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23,162,184,0.3);
+        }
+        
+        #alerta-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .alerta {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alerta-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .alerta-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .alerta-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        @media print {
+            .header-control,
+            .acciones-footer,
+            #alerta-container {
+                display: none !important;
+            }
+            
+            body {
+                background: white;
+            }
+            
+            .container {
+                margin: 0;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="header-control">
+        <div class="header-title">
+            📹 Reporte de Cámaras - Control Total
+        </div>
+        
+        <div class="header-buttons">
+            <button class="btn-salir" onclick="window.location.href='{% url 'consulta_reportes_camaras' %}'">📊 Ver Reportes</button>
+            <button class="btn-salir" onclick="window.location.href='{% url 'home' %}'">← Volver</button>
+        </div>
+    </div>
+    
+    <div id="alerta-container"></div>
+    
+    <div class="container">
+        <div class="reporte-card" id="reporte-contenido">
+            
+            <div class="reporte-header">
+                <h1>Reporte Diario - Control de Cámaras</h1>
+                <p>Río Pescado - Collín - Lican - Trafún</p>
+            </div>
+            
+            <div class="reporte-info">
+                <div class="info-item">
+                    <span class="info-label">Fecha</span>
+                    <div class="info-value">
+                        <input type="date" id="fecha" value="{{ fecha_actual|date:'Y-m-d' }}">
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Turno</span>
+                    <div class="info-value">
+                        <select id="turno">
+                            <option value="Mañana">Mañana</option>
+                            <option value="Tarde" selected>Tarde</option>
+                            <option value="Noche">Noche</option>
+                        </select>
+                        <div class="turno-horario" id="turno-horario">
+                            Horario: 14:30 - 00:00
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">Responsable</span>
+                    <div class="info-value">
+                        <input type="text" id="responsable" placeholder="Nombre del responsable">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="centros-grid">
+                
+                <div class="centro-card">
+                    <div class="centro-header">
+                        <span class="centro-icon">🏢</span>
+                        <span class="centro-nombre">Río Pescado</span>
+                    </div>
+                    <div class="centro-status">
+                        <div class="status-option">
+                            <input type="radio" name="rio_pescado_status" id="rio_pescado_ok" value="sin_incidencias" checked>
+                            <label for="rio_pescado_ok">✓ No se detectaron incidencias durante el monitoreo</label>
+                        </div>
+                        <div class="status-option">
+                            <input type="radio" name="rio_pescado_status" id="rio_pescado_incidencia" value="con_incidencias">
+                            <label for="rio_pescado_incidencia">⚠ Se detectaron incidencias</label>
+                        </div>
+                        <div class="incidencia-input" id="rio_pescado_input">
+                            <textarea placeholder="Describe las incidencias detectadas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="centro-card">
+                    <div class="centro-header">
+                        <span class="centro-icon">🏢</span>
+                        <span class="centro-nombre">Collín</span>
+                    </div>
+                    <div class="centro-status">
+                        <div class="status-option">
+                            <input type="radio" name="collin_status" id="collin_ok" value="sin_incidencias" checked>
+                            <label for="collin_ok">✓ No se detectaron incidencias durante el monitoreo</label>
+                        </div>
+                        <div class="status-option">
+                            <input type="radio" name="collin_status" id="collin_incidencia" value="con_incidencias">
+                            <label for="collin_incidencia">⚠ Se detectaron incidencias</label>
+                        </div>
+                        <div class="incidencia-input" id="collin_input">
+                            <textarea placeholder="Describe las incidencias detectadas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="centro-card">
+                    <div class="centro-header">
+                        <span class="centro-icon">🏢</span>
+                        <span class="centro-nombre">Lican</span>
+                    </div>
+                    <div class="centro-status">
+                        <div class="status-option">
+                            <input type="radio" name="lican_status" id="lican_ok" value="sin_incidencias" checked>
+                            <label for="lican_ok">✓ No se detectaron incidencias durante el monitoreo</label>
+                        </div>
+                        <div class="status-option">
+                            <input type="radio" name="lican_status" id="lican_incidencia" value="con_incidencias">
+                            <label for="lican_incidencia">⚠ Se detectaron incidencias</label>
+                        </div>
+                        <div class="incidencia-input" id="lican_input">
+                            <textarea placeholder="Describe las incidencias detectadas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="centro-card">
+                    <div class="centro-header">
+                        <span class="centro-icon">🏢</span>
+                        <span class="centro-nombre">Trafún</span>
+                    </div>
+                    <div class="centro-status">
+                        <div class="status-option">
+                            <input type="radio" name="trafun_status" id="trafun_ok" value="sin_incidencias" checked>
+                            <label for="trafun_ok">✓ No se detectaron incidencias durante el monitoreo</label>
+                        </div>
+                        <div class="status-option">
+                            <input type="radio" name="trafun_status" id="trafun_incidencia" value="con_incidencias">
+                            <label for="trafun_incidencia">⚠ Se detectaron incidencias</label>
+                        </div>
+                        <div class="incidencia-input" id="trafun_input">
+                            <textarea placeholder="Describe las incidencias detectadas..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="acciones-footer">
+                <button class="btn-accion btn-guardar" id="btnGuardar">
+                    <span>💾</span> Guardar Reporte
+                </button>
+                <button class="btn-accion btn-captura" id="btnCaptura">
+                    <span>📸</span> Generar Captura
+                </button>
+                <button class="btn-accion btn-pdf" id="btnPDF">
+                    <span>📄</span> Exportar PDF
+                </button>
+            </div>
+            
+        </div>
+    </div>
+    
+    {% csrf_token %}
+    
+    <script src="{% static 'js/reporte_camaras.js' %}"></script>
+    
+</body>
+</html>

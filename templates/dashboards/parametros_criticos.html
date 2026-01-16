@@ -1,0 +1,21 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Parámetros Críticos{% endblock %}
+{% block content %}
+<h1>🌡️ Parámetros Críticos</h1>
+<p class="dashboard-subtitle">Monitoreo de Temperatura, pH y Oxígeno</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">🌡️</div><div class="metric-content"><h3>{{ temp_actual|floatformat:1 }}°C</h3><p>Temperatura Actual</p></div></div>
+    <div class="metric-card"><div class="metric-icon">💧</div><div class="metric-content"><h3>{{ ph_actual|floatformat:1 }}</h3><p>pH Actual</p></div></div>
+    <div class="metric-card"><div class="metric-icon">🫧</div><div class="metric-content"><h3>{{ oxigeno_actual|floatformat:1 }}</h3><p>Oxígeno Actual</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-content"><h3>{{ temp_desviacion }}</h3><p>Desviación Estándar</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>📈 Evolución de Parámetros (24h)</h3><canvas id="chartParametros24h"></canvas></div>
+    <div class="chart-card"><h3>🎯 Rangos Óptimos</h3><div style="padding: 20px;">
+        <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;"><strong>Temperatura:</strong> {{ rangos_optimos.temp.min }}°C - {{ rangos_optimos.temp.max }}°C<br><span style="color: {% if rangos_optimos.temp.actual >= rangos_optimos.temp.min and rangos_optimos.temp.actual <= rangos_optimos.temp.max %}#28a745{% else %}#dc3545{% endif %};">Actual: {{ rangos_optimos.temp.actual|floatformat:1 }}°C</span></div>
+        <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;"><strong>pH:</strong> {{ rangos_optimos.ph.min }} - {{ rangos_optimos.ph.max }}<br><span style="color: {% if rangos_optimos.ph.actual >= rangos_optimos.ph.min and rangos_optimos.ph.actual <= rangos_optimos.ph.max %}#28a745{% else %}#dc3545{% endif %};">Actual: {{ rangos_optimos.ph.actual|floatformat:1 }}</span></div>
+        <div style="padding: 15px; background: #f8f9fa; border-radius: 8px;"><strong>Oxígeno:</strong> {{ rangos_optimos.oxigeno.min }} - {{ rangos_optimos.oxigeno.max }} mg/L<br><span style="color: {% if rangos_optimos.oxigeno.actual >= rangos_optimos.oxigeno.min and rangos_optimos.oxigeno.actual <= rangos_optimos.oxigeno.max %}#28a745{% else %}#dc3545{% endif %};">Actual: {{ rangos_optimos.oxigeno.actual|floatformat:1 }} mg/L</span></div>
+    </div></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>new Chart(document.getElementById('chartParametros24h'),{type:'line',data:{labels:{{ horas_labels|safe }},datasets:[{label:'Temperatura',data:{{ temp_24h|safe }},borderColor:'#dc3545',fill:false},{label:'pH',data:{{ ph_24h|safe }},borderColor:'#ffc107',fill:false},{label:'Oxígeno',data:{{ oxigeno_24h|safe }},borderColor:'#17a2b8',fill:false}]},options:{responsive:true,maintainAspectRatio:false}});</script>{% endblock %}

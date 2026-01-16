@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} - Cermaq</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'imagenes/logo-pestaña.png' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="page-layout">
+        <div class="dashboard-container">
+            {% block content %}{% endblock %}
+        </div>
+        
+        <div class="sidebar-actions">
+            <h4>🛠️ Navegación</h4>
+            <div class="action-group">
+                <span>Dashboards</span>
+                <button onclick="window.location.href='{% url 'dashboard' %}'">📊 General</button>
+                <button onclick="window.location.href='{% url 'dashboard_salud_operacional' %}'">🟢 Salud Operacional</button>
+                <button onclick="window.location.href='{% url 'dashboard_tendencias' %}'">📈 Tendencias</button>
+                <button onclick="window.location.href='{% url 'dashboard_cumplimiento' %}'">✅ Cumplimiento</button>
+                <button onclick="window.location.href='{% url 'dashboard_analisis_incidencias' %}'">🔍 Análisis</button>
+                <button onclick="window.location.href='{% url 'dashboard_comparacion_centros' %}'">🏆 Comparación</button>
+                <button onclick="window.location.href='{% url 'dashboard_parametros_criticos' %}'">🌡️ Parámetros</button>
+                <button onclick="window.location.href='{% url 'dashboard_ejecutivo' %}'">👔 Ejecutivo</button>
+                <button onclick="window.location.href='{% url 'dashboard_productividad' %}'">👥 Productividad</button>
+                <button onclick="window.location.href='{% url 'dashboard_alertas' %}'">🔔 Alertas</button>
+                <button onclick="window.location.href='{% url 'dashboard_costos' %}'">💰 Costos</button>
+            </div>
+            <div class="action-group">
+                <span>Acciones</span>
+                <button onclick="window.location.href='{% url 'reporte' %}'">📄 Ver Reportes</button>
+                <button onclick="window.location.href='{% url 'home' %}'">🏠 Inicio</button>
+            </div>
+        </div>
+    </div>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

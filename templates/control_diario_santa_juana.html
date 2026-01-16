@@ -1,0 +1,446 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Total Piscicultura</title>
+    <link rel="icon" type="image/png" href="{% static 'imagenes/logo-pestaña.png' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        
+        .header-control {
+            background: #17a2b8;
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .header-controls label {
+            font-size: 13px;
+            margin-right: 5px;
+        }
+        
+        .header-controls select,
+        .header-controls input {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            min-width: 80px;
+        }
+        
+        .header-controls input[type="text"] {
+            min-width: 200px;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .header-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .btn-salir {
+            background: #dc3545;
+            padding: 8px 16px;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .user-info {
+            background: rgba(0,0,0,0.1);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .tabs-container {
+            background: white;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #17a2b8;
+            color: white;
+            border-bottom-color: #17a2b8;
+        }
+        
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+        
+        .content-area {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .module-title {
+            font-size: 24px;
+            color: #17a2b8;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        
+        .tabla-parametros {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        
+        .tabla-parametros table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .tabla-parametros thead {
+            background: #f8f9fa;
+        }
+        
+        .tabla-parametros th {
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            font-size: 15px;
+        }
+        
+        .tabla-parametros td {
+            padding: 12px 15px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .tabla-parametros tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tabla-parametros .hora-col {
+            font-weight: 600;
+            color: #495057;
+            background: #f8f9fa;
+            width: 100px;
+        }
+        
+        .tabla-parametros input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .tabla-parametros input:focus {
+            outline: none;
+            border-color: #17a2b8;
+            box-shadow: 0 0 0 3px rgba(23,162,184,0.1);
+        }
+        
+        .fila-promedio {
+            background: #d4edda !important;
+            font-weight: 600;
+        }
+        
+        .fila-promedio td {
+            padding: 15px;
+            font-size: 15px;
+            color: #155724;
+        }
+        
+        .botones-exportar {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .btn-exportar {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .btn-excel {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-excel:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(23,162,184,0.3);
+        }
+        
+        .btn-pdf {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-pdf:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+        }
+        
+        #alerta-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .alerta {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .alerta-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .alerta-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="header-control">
+        <div class="header-title">
+            <span>≡</span> Control Total Piscicultura
+        </div>
+        
+        <div class="header-controls">
+            <div>
+                <label>Año</label>
+                <select id="anio">
+                    <option value="2026" selected>2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Semana</label>
+                <input type="number" id="semana" value="2" min="1" max="53" style="width: 70px;">
+            </div>
+            
+            <div>
+                <label>Día</label>
+                <select id="dia">
+                    <option value="Lunes" selected>Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miércoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                </select>
+            </div>
+            
+            <div>
+                <label>Responsable</label>
+                <input type="text" id="responsable" placeholder="Jorge Cárdenas, Nicolás C">
+            </div>
+        </div>
+        
+        <div class="header-buttons">
+            <button class="header-btn">⬆</button>
+            <button class="header-btn">⬇</button>
+            <button class="header-btn">🖨</button>
+            <button class="btn-salir" onclick="window.location.href='{% url 'reporte' %}'">Salir</button>
+        </div>
+    </div>
+    
+    <div class="user-info" style="background: #138496; color: white; padding: 8px 30px; text-align: right; font-size: 12px;">
+        Usuario: control.total | Año: <span id="display-anio">2026</span> | Sem <span id="display-semana">2</span> - <span id="display-dia">Lunes</span>
+    </div>
+    
+    <div class="tabs-container">
+        <div class="tabs">
+            <button class="tab active" data-module="Hatchery">Hatchery</button>
+            <button class="tab" data-module="Fry">Fry</button>
+            <button class="tab" data-module="Ongrowing">Ongrowing</button>
+            <button class="tab" data-module="Smolt">Smolt</button>
+            <button class="tab" data-module="Ficha Crianza">Ficha Crianza</button>
+            <button class="tab" data-module="Reporte Diario">Reporte Diario</button>
+            <button class="tab" data-module="Cámaras">Cámaras</button>
+        </div>
+    </div>
+    
+    <div class="content-area">
+        <h2 class="module-title" id="module-title">Hatchery</h2>
+        
+        <div id="alerta-container"></div>
+        
+        <div class="tabla-parametros">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Hora</th>
+                        <th>Temp</th>
+                        <th>pH</th>
+                        <th>Oxígeno</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="hora-col">00:00</td>
+                        <td><input type="number" step="0.01" id="hora_00_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_00_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_00_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr>
+                        <td class="hora-col">04:00</td>
+                        <td><input type="number" step="0.01" id="hora_04_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_04_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_04_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr>
+                        <td class="hora-col">08:00</td>
+                        <td><input type="number" step="0.01" id="hora_08_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_08_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_08_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr>
+                        <td class="hora-col">12:00</td>
+                        <td><input type="number" step="0.01" id="hora_12_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_12_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_12_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr>
+                        <td class="hora-col">16:00</td>
+                        <td><input type="number" step="0.01" id="hora_16_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_16_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_16_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr>
+                        <td class="hora-col">20:00</td>
+                        <td><input type="number" step="0.01" id="hora_20_temp" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_20_ph" placeholder=""></td>
+                        <td><input type="number" step="0.01" id="hora_20_oxigeno" placeholder=""></td>
+                    </tr>
+                    <tr class="fila-promedio">
+                        <td class="hora-col">PROM:</td>
+                        <td id="prom_temp">-</td>
+                        <td id="prom_ph">-</td>
+                        <td id="prom_oxigeno">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="botones-exportar">
+            <button class="btn-exportar btn-excel" id="btnExportarExcel">
+                <span>📊</span> Excel Diario (General)
+            </button>
+            <button class="btn-exportar btn-pdf" id="btnExportarPDF">
+                <span>📄</span> PDF Diario (General)
+            </button>
+        </div>
+    </div>
+    
+    <input type="hidden" id="centro_id" value="{{ centro.id }}">
+    <input type="hidden" id="modulo" value="Hatchery">
+    <input type="hidden" id="fecha" value="{{ fecha_actual|date:'Y-m-d' }}">
+    {% csrf_token %}
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="{% static 'js/control_diario_nuevo.js' %}"></script>
+    
+</body>
+</html>

@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function rellenarSelectOperarios(items) {
         operarioSelect.innerHTML = '';
+        operarioSelect.removeAttribute('required'); // Operario es opcional
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
         defaultOption.textContent = 'Seleccione un operario';
@@ -256,6 +257,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // --- 8. LÓGICA DE "MODO EDICIÓN" (MÁS ROBUSTA) ---
     if (MODO_EDICION && window.INCIDENCIA_A_EDITAR) {
         const data = window.INCIDENCIA_A_EDITAR;
+        console.log('Modo edición - Datos cargados:', data);
+        console.log('Centro seleccionado:', centroSelect.value);
+        console.log('Datos módulos disponibles:', window.DATOS_MODULOS);
 
         // 1. Poblar las listas que dependen del Centro
         // (El centro ya está seleccionado por Django)
@@ -271,6 +275,13 @@ document.addEventListener('DOMContentLoaded', function () {
         
         // 3. Seleccionar el Módulo
         if (data.modulo) {
+            // Si el módulo no existe en la lista, agregarlo
+            if (!Array.from(moduloSelect.options).some(opt => opt.value === data.modulo)) {
+                const opt = document.createElement('option');
+                opt.value = data.modulo;
+                opt.textContent = data.modulo;
+                moduloSelect.appendChild(opt);
+            }
             moduloSelect.value = data.modulo;
             
             // 4. Poblar la lista de Estanques
@@ -278,6 +289,13 @@ document.addEventListener('DOMContentLoaded', function () {
             
             // 5. Seleccionar el Estanque
             if (data.estanque) {
+                // Si el estanque no existe en la lista, agregarlo
+                if (!Array.from(estanqueSelect.options).some(opt => opt.value === data.estanque)) {
+                    const opt = document.createElement('option');
+                    opt.value = data.estanque;
+                    opt.textContent = data.estanque;
+                    estanqueSelect.appendChild(opt);
+                }
                 estanqueSelect.value = data.estanque;
             }
         }

@@ -97,6 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const tipoFallaSelect = document.getElementById('tipo_falla');
     const operarioSelect = document.getElementById('operario_contacto');
     const centroHiddenInput = document.getElementById('id_centro_hidden');
+    const afectaTodoModuloCheckbox = document.getElementById('afecta_todo_modulo');
+    
+    // Sistemas generales para incidencias de módulo completo
+    const sistemasGenerales = {
+        'Sistema de Sal / Salinidad': ['Baja Concentración de Sal', 'Alta Concentración de Sal', 'Alarma General Sistema Sal'],
+        'Sistema de CAL': ['Alarma General Sistema CAL', 'Falla Sistema CAL'],
+        'Sistema de Oxígeno General': ['Baja Concentración Oxígeno', 'Alta Concentración Oxígeno', 'Alarma Oxígeno General'],
+        'Sistema de Nivel/Agua': ['Falla Sensor de Nivel', 'Alarma Nivel General']
+    };
     
     // --- 5. FUNCIONES DE ALERTA Y CASCADA ---
     function mostrarAlerta(mensaje, tipo) {
@@ -195,12 +204,53 @@ document.addEventListener('DOMContentLoaded', () => {
         fillSelect(tipoFallaSelect, []);
 
         let fallas;
-        if (datosCascada[lugar]?.zonas) {
+        if (afectaTodoModuloCheckbox.checked) {
+            // Si es incidencia general, usar fallas generales
+            fallas = sistemasGenerales[sistema] || [];
+        } else if (datosCascada[lugar]?.zonas) {
             fallas = datosCascada[lugar].zonas[zona]?.[equipo]?.[sistema] || [];
         } else {
             fallas = datosCascada[lugar].equipos?.[equipo]?.[sistema] || [];
         }
         fillSelect(tipoFallaSelect, fallas);
+    });
+
+    // --- LÓGICA DEL CHECKBOX "AFECTA TODO EL MÓDULO" ---
+    afectaTodoModuloCheckbox.addEventListener('change', () => {
+        if (afectaTodoModuloCheckbox.checked) {
+            // Modo: Incidencia General
+            // 1. Deshabilitar selector de Zona y asignar valor genérico
+            zonaSelect.disabled = true;
+            zonaSelect.required = false;
+            zonaSelect.innerHTML = '<option value="GENERAL" selected>GENERAL - TODO EL SECTOR</option>';
+            
+            // 2. Deshabilitar y limpiar selector de Equipo
+            equipoSelect.disabled = true;
+            equipoSelect.required = false;
+            equipoSelect.innerHTML = '<option value="TODO EL MÓDULO" selected>TODO EL MÓDULO</option>';
+            
+            // 3. Mostrar solo sistemas generales
+            fillSelect(sistemaSelect, Object.keys(sistemasGenerales));
+            fillSelect(tipoFallaSelect, []);
+            
+        } else {
+            // Modo: Incidencia Específica (normal)
+            // 1. Rehabilitar selector de Zona
+            zonaSelect.disabled = false;
+            zonaSelect.required = true;
+            
+            // 2. Restaurar funcionalidad normal
+            const lugar = lugarSelect.value;
+            
+            if (lugar && datosCascada[lugar]?.zonas) {
+                const zonas = Object.keys(datosCascada[lugar].zonas);
+                fillSelect(zonaSelect, zonas);
+            }
+            
+            fillSelect(equipoSelect, []);
+            fillSelect(sistemaSelect, []);
+            fillSelect(tipoFallaSelect, []);
+        }
     });
 
     // --- 6. FUNCIÓN PARA CARGAR DATOS EN MODO EDICIÓN ---

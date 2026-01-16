@@ -87,3 +87,112 @@ class Incidencia(models.Model):
         centro_nombre = self.centro.nombre if self.centro else "Centro no especificado"
         fecha_str = self.fecha_hora.strftime('%Y-%m-%d %H:%M') if self.fecha_hora else "Fecha no especificada"
         return f"Incidencia en {centro_nombre} - {fecha_str}"
+
+# --- NUEVO MODELO: CONTROL DIARIO ---
+# Tabla para registrar parámetros diarios (Temp, pH, Oxígeno) por hora
+class ControlDiario(models.Model):
+    centro = models.ForeignKey(Centro, on_delete=models.CASCADE, related_name='controles_diarios')
+    fecha = models.DateField()
+    anio = models.IntegerField()
+    semana = models.IntegerField()
+    dia = models.CharField(max_length=20)  # Lunes, Martes, etc.
+    responsable = models.CharField(max_length=200)
+    modulo = models.CharField(max_length=100, default='Hatchery')  # Hatchery, Fry, Smolt, etc.
+    
+    # Registros por hora (00:00, 04:00, 08:00, 12:00, 16:00, 20:00)
+    hora_00_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_00_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_00_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    hora_04_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_04_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_04_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    hora_08_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_08_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_08_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    hora_12_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_12_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_12_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    hora_16_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_16_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_16_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    hora_20_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hora_20_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    hora_20_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    # Promedios (se calculan automáticamente)
+    promedio_temp = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    promedio_ph = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    promedio_oxigeno = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
+    # Metadata
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha', '-creado_en']
+        unique_together = ['centro', 'fecha', 'modulo']
+    
+    def calcular_promedios(self):
+        """Calcula los promedios de temperatura, pH y oxígeno"""
+        horas = ['00', '04', '08', '12', '16', '20']
+        
+        # Calcular promedio temperatura
+        temps = [getattr(self, f'hora_{h}_temp') for h in horas if getattr(self, f'hora_{h}_temp') is not None]
+        self.promedio_temp = sum(temps) / len(temps) if temps else None
+        
+        # Calcular promedio pH
+        phs = [getattr(self, f'hora_{h}_ph') for h in horas if getattr(self, f'hora_{h}_ph') is not None]
+        self.promedio_ph = sum(phs) / len(phs) if phs else None
+        
+        # Calcular promedio oxígeno
+        oxigenos = [getattr(self, f'hora_{h}_oxigeno') for h in horas if getattr(self, f'hora_{h}_oxigeno') is not None]
+        self.promedio_oxigeno = sum(oxigenos) / len(oxigenos) if oxigenos else None
+    
+    def save(self, *args, **kwargs):
+        # Calcular promedios antes de guardar
+        self.calcular_promedios()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Control Diario - {self.centro.nombre} - {self.fecha} - {self.modulo}"
+
+# --- NUEVO MODELO: REPORTE DE CÁMARAS ---
+# Tabla para registrar el estado diario de las cámaras de los 4 centros
+class ReporteCamaras(models.Model):
+    fecha = models.DateField()
+    turno = models.CharField(max_length=20)  # Mañana, Tarde, Noche
+    responsable = models.CharField(max_length=200)
+    
+    # Río Pescado
+    rio_pescado_tiene_incidencias = models.BooleanField(default=False)
+    rio_pescado_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    
+    # Collín
+    collin_tiene_incidencias = models.BooleanField(default=False)
+    collin_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    
+    # Lican
+    lican_tiene_incidencias = models.BooleanField(default=False)
+    lican_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    
+    # Trafún
+    trafun_tiene_incidencias = models.BooleanField(default=False)
+    trafun_descripcion = models.TextField(default='No se detectaron incidencias durante el monitoreo')
+    
+    # Metadata
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha', '-creado_en']
+        unique_together = ['fecha', 'turno']
+        verbose_name = 'Reporte de Cámaras'
+        verbose_name_plural = 'Reportes de Cámaras'
+    
+    def __str__(self):
+        return f"Reporte Cámaras - {self.fecha} - {self.turno}"

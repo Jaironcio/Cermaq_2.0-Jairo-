@@ -1,0 +1,21 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Análisis de Costos e Impacto{% endblock %}
+{% block content %}
+<h1>💰 Análisis de Costos e Impacto</h1>
+<p class="dashboard-subtitle">ROI y análisis financiero</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">💰</div><div class="metric-content"><h3>${{ costo_total|floatformat:0 }}</h3><p>Costo Total (30 días)</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-content"><h3>{{ costos_por_tipo|length }}</h3><p>Tipos de Costos</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📈</div><div class="metric-content"><h3>6</h3><p>Meses Analizados</p></div></div>
+    <div class="metric-card"><div class="metric-icon">💡</div><div class="metric-content"><h3 id="ahorro-potencial">$0</h3><p>Ahorro Potencial</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>💰 Costos por Tipo de Incidencia</h3><div style="overflow-y: auto; max-height: 400px;">
+        <table style="width: 100%; border-collapse: collapse;"><thead style="background: #f8f9fa; position: sticky; top: 0;"><tr><th style="padding: 12px; text-align: left;">Tipo</th><th style="padding: 12px; text-align: center;">Cantidad</th><th style="padding: 12px; text-align: right;">Costo Unit.</th><th style="padding: 12px; text-align: right;">Total</th></tr></thead><tbody>
+        {% for item in costos_por_tipo %}<tr style="border-bottom: 1px solid #e9ecef;"><td style="padding: 12px;">{{ item.tipo }}</td><td style="padding: 12px; text-align: center;">{{ item.cantidad }}</td><td style="padding: 12px; text-align: right;">${{ item.costo_unitario|floatformat:0 }}</td><td style="padding: 12px; text-align: right; font-weight: bold;">${{ item.costo_total|floatformat:0 }}</td></tr>{% endfor %}
+        </tbody></table>
+    </div></div>
+    <div class="chart-card"><h3>📈 Tendencia de Costos (6 meses)</h3><canvas id="chartCostos"></canvas></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>new Chart(document.getElementById('chartCostos'),{type:'line',data:{labels:{{ meses_labels|safe }},datasets:[{label:'Costos ($)',data:{{ meses_costos|safe }},borderColor:'#dc3545',backgroundColor:'rgba(220,53,69,0.1)',tension:0.4}]},options:{responsive:true,maintainAspectRatio:false}});document.getElementById('ahorro-potencial').textContent='$'+Math.round({{ costo_total }}*0.3).toLocaleString();</script>{% endblock %}

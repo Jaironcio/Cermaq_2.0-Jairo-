@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }} - Cermaq</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="icon" type="image/png" href="{% static 'imagenes/logo-pestaña.png' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="page-layout">
+        <div class="dashboard-container">
+            <h1>🟢 {{ titulo }}</h1>
+            <p class="dashboard-subtitle">Vista general del estado actual de todos los centros</p>
+            
+            <!-- KPI Cards -->
+            <section class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-content">
+                        <h3>{{ total_incidencias_24h }}</h3>
+                        <p>Incidencias 24h</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">🏭</div>
+                    <div class="metric-content">
+                        <h3>{{ modulos_estado|length }}</h3>
+                        <p>Centros Monitoreados</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">✅</div>
+                    <div class="metric-content">
+                        <h3>{{ ultimos_registros|length }}</h3>
+                        <p>Registros Recientes</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon">⏰</div>
+                    <div class="metric-content">
+                        <h3 id="tiempo-actual">--:--</h3>
+                        <p>Hora Actual</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Semáforo de Estado por Centro -->
+            <section class="dashboard-charts-grid">
+                <div class="chart-card">
+                    <h3>🚦 Estado por Centro (Semáforo)</h3>
+                    <div style="padding: 20px;">
+                        {% for modulo in modulos_estado %}
+                        <div style="display: flex; align-items: center; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; 
+                                {% if modulo.estado == 'verde' %}background: #28a745;
+                                {% elif modulo.estado == 'amarillo' %}background: #ffc107;
+                                {% else %}background: #dc3545;{% endif %}
+                                margin-right: 20px;"></div>
+                            <div style="flex: 1;">
+                                <strong style="font-size: 1.1em;">{{ modulo.centro }}</strong>
+                                <p style="margin: 5px 0 0 0; color: #6c757d;">{{ modulo.incidencias }} incidencias en 24h</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>📋 Últimos Registros</h3>
+                    <div style="overflow-y: auto; max-height: 400px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: #f8f9fa; position: sticky; top: 0;">
+                                <tr>
+                                    <th style="padding: 12px; text-align: left;">Fecha</th>
+                                    <th style="padding: 12px; text-align: left;">Módulo</th>
+                                    <th style="padding: 12px; text-align: left;">Responsable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for registro in ultimos_registros %}
+                                <tr style="border-bottom: 1px solid #e9ecef;">
+                                    <td style="padding: 12px;">{{ registro.fecha|date:"d/m/Y" }}</td>
+                                    <td style="padding: 12px;">{{ registro.modulo }}</td>
+                                    <td style="padding: 12px;">{{ registro.responsable }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <div class="sidebar-actions">
+            <h4>🛠️ Navegación</h4>
+            <div class="action-group">
+                <span>Dashboards</span>
+                <button onclick="window.location.href='{% url 'dashboard' %}'">📊 General</button>
+                <button onclick="window.location.href='{% url 'dashboard_tendencias' %}'">📈 Tendencias</button>
+                <button onclick="window.location.href='{% url 'dashboard_cumplimiento' %}'">✅ Cumplimiento</button>
+                <button onclick="window.location.href='{% url 'dashboard_analisis_incidencias' %}'">🔍 Análisis</button>
+                <button onclick="window.location.href='{% url 'dashboard_comparacion_centros' %}'">🏆 Comparación</button>
+                <button onclick="window.location.href='{% url 'dashboard_parametros_criticos' %}'">🌡️ Parámetros</button>
+                <button onclick="window.location.href='{% url 'dashboard_ejecutivo' %}'">👔 Ejecutivo</button>
+                <button onclick="window.location.href='{% url 'dashboard_productividad' %}'">👥 Productividad</button>
+                <button onclick="window.location.href='{% url 'dashboard_alertas' %}'">🔔 Alertas</button>
+                <button onclick="window.location.href='{% url 'dashboard_costos' %}'">💰 Costos</button>
+            </div>
+            <div class="action-group">
+                <span>Acciones</span>
+                <button onclick="window.location.href='{% url 'reporte' %}'">📄 Ver Reportes</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Actualizar hora actual
+        function actualizarHora() {
+            const ahora = new Date();
+            document.getElementById('tiempo-actual').textContent = 
+                ahora.toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'});
+        }
+        actualizarHora();
+        setInterval(actualizarHora, 1000);
+    </script>
+</body>
+</html>

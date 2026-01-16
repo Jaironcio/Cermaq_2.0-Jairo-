@@ -24,8 +24,28 @@ urlpatterns = [
     path('reporte/', views.vista_reporte, name='reporte'),
     path('dashboard/', views.vista_dashboard, name='dashboard'),
     
-    # 6. APIs (No cambian)
+    # 6. CONTROL DIARIO SANTA JUANA
+    path('control-diario/santa-juana/', views.vista_control_diario_santa_juana, name='control_diario_santa_juana'),
+    
+    # 7. REPORTE DE CÁMARAS
+    path('reporte-camaras/', views.vista_reporte_camaras, name='reporte_camaras'),
+    
+    # 8. APIs ()
     path('api/registrar-incidencia/', views.registrar_incidencia_api, name='api-registrar-incidencia'),
     path('api/incidencia/<int:pk>/delete/', views.delete_incidencia_api, name='api-delete-incidencia'),
     path('api/incidencia/<int:pk>/update/', views.update_incidencia_api, name='api-update-incidencia'),
+    
+    # 9. APIs CONTROL DIARIO
+    path('api/control-diario/guardar/', views.guardar_control_diario_api, name='api-guardar-control-diario'),
+    path('api/control-diario/obtener/', views.obtener_control_diario_api, name='api-obtener-control-diario'),
+    
+    # 10. APIs REPORTE DE CÁMARAS
+    path('api/reporte-camaras/guardar/', views.guardar_reporte_camaras_api, name='api-guardar-reporte-camaras'),
+    path('api/reporte-camaras/obtener/', views.obtener_reporte_camaras_api, name='api-obtener-reporte-camaras'),
+    path('api/reporte-camaras/listar/', views.listar_reportes_camaras_api, name='api-listar-reportes-camaras'),
+    path('api/reporte-camaras/detalle/<int:pk>/', views.detalle_reporte_camaras_api, name='api-detalle-reporte-camaras'),
+    path('api/reporte-camaras/eliminar/<int:pk>/', views.eliminar_reporte_camaras_api, name='api-eliminar-reporte-camaras'),
+    
+    # 11. CONSULTA DE REPORTES DE CÁMARAS
+    path('consulta-reportes-camaras/', views.vista_consulta_reportes_camaras, name='consulta_reportes_camaras'),
 ]

@@ -1,0 +1,21 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Comparación de Centros{% endblock %}
+{% block content %}
+<h1>🏆 Comparación de Centros</h1>
+<p class="dashboard-subtitle">Benchmarking entre ubicaciones</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">🏭</div><div class="metric-content"><h3>{{ comparacion_data|length }}</h3><p>Centros Comparados</p></div></div>
+    <div class="metric-card"><div class="metric-icon">🥇</div><div class="metric-content"><h3>{{ podio.0.centro|default:"N/A" }}</h3><p>Mejor Centro</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-content"><h3>30</h3><p>Días Analizados</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📈</div><div class="metric-content"><h3>{{ comparacion_data|length }}</h3><p>KPIs Medidos</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>📊 Comparación de Incidencias por Centro</h3><canvas id="chartComparacion"></canvas></div>
+    <div class="chart-card"><h3>🏆 Podio de Mejores Centros</h3><div style="padding: 30px;">
+        {% for centro in podio %}<div style="margin-bottom: 20px; padding: 20px; background: {% if forloop.counter == 1 %}#ffd700{% elif forloop.counter == 2 %}#c0c0c0{% else %}#cd7f32{% endif %}; border-radius: 10px; color: white; text-align: center;">
+            <h2 style="margin: 0; font-size: 2em;">{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</h2>
+            <h3 style="margin: 10px 0;">{{ centro.centro }}</h3><p style="margin: 0;">{{ centro.total_incidencias }} incidencias</p></div>{% endfor %}
+    </div></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>new Chart(document.getElementById('chartComparacion'),{type:'bar',data:{labels:{{ centros_nombres|safe }},datasets:[{label:'Incidencias',data:{{ centros_incidencias|safe }},backgroundColor:'#17a2b8'}]},options:{responsive:true,maintainAspectRatio:false}});</script>{% endblock %}

@@ -1,0 +1,83 @@
+{% extends 'dashboards/base_dashboard.html' %}
+
+{% block title %}Cumplimiento y Calidad{% endblock %}
+
+{% block content %}
+<h1>✅ Cumplimiento y Calidad</h1>
+<p class="dashboard-subtitle">Métricas de desempeño del equipo</p>
+
+<section class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-content">
+            <h3>{{ cumplimiento_porcentaje }}%</h3>
+            <p>Cumplimiento General</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">👥</div>
+        <div class="metric-content">
+            <h3>{{ registros_por_responsable|length }}</h3>
+            <p>Responsables Activos</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🏆</div>
+        <div class="metric-content">
+            <h3>{{ centros_ranking|length }}</h3>
+            <p>Centros Evaluados</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">📋</div>
+        <div class="metric-content">
+            <h3>{{ total_incidencias }}</h3>
+            <p>Total Incidencias</p>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-charts-grid">
+    <div class="chart-card">
+        <h3>👥 Registros por Responsable</h3>
+        <canvas id="chartResponsables"></canvas>
+    </div>
+    
+    <div class="chart-card">
+        <h3>🏆 Ranking de Centros</h3>
+        <div style="padding: 20px;">
+            {% for centro in centros_ranking %}
+            <div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>{{ forloop.counter }}. {{ centro.nombre }}</strong>
+                    <span style="background: #17a2b8; color: white; padding: 5px 15px; border-radius: 15px;">
+                        {{ centro.total_incidencias }} incidencias
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    new Chart(document.getElementById('chartResponsables'), {
+        type: 'bar',
+        data: {
+            labels: [{% for item in registros_por_responsable %}'{{ item.responsable }}',{% endfor %}],
+            datasets: [{
+                label: 'Registros',
+                data: [{% for item in registros_por_responsable %}{{ item.total_registros }},{% endfor %}],
+                backgroundColor: '#17a2b8'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y'
+        }
+    });
+</script>
+{% endblock %}

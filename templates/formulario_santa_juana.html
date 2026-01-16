@@ -90,6 +90,14 @@
                         <select id="zona" name="estanque" required>
                             <option value="" disabled selected>Seleccione Zona</option>
                         </select>
+                        
+                        <!-- Checkbox para Incidencia General -->
+                        <div style="margin-top: 12px;">
+                            <input type="checkbox" id="afecta_todo_modulo" name="afecta_todo_modulo">
+                            <label for="afecta_todo_modulo" style="font-weight: bold; color: #d9534f;">
+                                🚨 Incidencia General (Afecta todo el Módulo)
+                            </label>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="equipo">Equipo:</label>
@@ -139,7 +147,7 @@
                     </div>
                     <div class="form-group">
                         <label for="operario_contacto">Operario Contacto:</label>
-                        <select id="operario_contacto" name="operario_contacto" required>
+                        <select id="operario_contacto" name="operario_contacto">
                             <option value="">Seleccione operario</option>
                         </select>
                     </div>

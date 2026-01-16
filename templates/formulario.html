@@ -134,13 +134,6 @@
                                placeholder="Valor (ej: 12,2)" inputmode="decimal" 
                                value="{{ incidencia_a_editar.turbidez_valor }}" class="hidden-input">
                     </div>
-
-                    <div class="form-group">
-                        <label>Otros parámetros:</label><br>
-                        <input type="checkbox" id="pH" name="parametros" value="pH"> <label for="pH">pH</label><br>
-                        <input type="checkbox" id="CO2" name="parametros" value="CO2"> <label for="CO2">CO2</label><br>
-                        <input type="checkbox" id="salinidad" name="parametros" value="salinidad"> <label for="salinidad">Salinidad</label>
-                    </div>
                 </section>
 
                 <section class="form-section {% if not incidencia_a_editar.tipo_incidencia == 'sensores' %}hidden{% endif %}" id="section-sistema-sensores">
@@ -208,7 +201,7 @@
                     <h2>6. Contacto del Operario que Respondió</h2>
                     <div class="form-group">
                         <label for="operarioContacto">Operario que Respondió:</label>
-                        <select id="operarioContacto" name="operarioContacto" required>
+                        <select id="operarioContacto" name="operarioContacto">
                             <option value="">Seleccione un operario</option>
                             </select>
                     </div>

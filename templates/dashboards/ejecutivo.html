@@ -1,0 +1,20 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Dashboard Ejecutivo{% endblock %}
+{% block content %}
+<h1>👔 Dashboard Ejecutivo</h1>
+<p class="dashboard-subtitle">Resumen gerencial de alto nivel</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">📊</div><div class="metric-content"><h3>{{ total_incidencias }}</h3><p>Total Incidencias</p></div></div>
+    <div class="metric-card"><div class="metric-icon">⚠️</div><div class="metric-content"><h3>{{ incidencias_criticas }}</h3><p>Incidencias Críticas</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📈</div><div class="metric-content"><h3>{{ tendencia }}%</h3><p>Tendencia ({{ tendencia_texto }})</p></div></div>
+    <div class="metric-card"><div class="metric-icon">✅</div><div class="metric-content"><h3>{{ cumplimiento_objetivo }}%</h3><p>Cumplimiento Objetivo</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>📊 Resumen Ejecutivo</h3><div style="padding: 30px; font-size: 1.1em; line-height: 1.8;">
+        <p><strong>Período analizado:</strong> Últimos 30 días</p><p><strong>Total de incidencias:</strong> {{ total_incidencias }}</p><p><strong>Incidencias críticas:</strong> {{ incidencias_criticas }}</p>
+        <p><strong>Tendencia:</strong> <span style="color: {% if tendencia_texto == 'mejorando' %}#28a745{% else %}#dc3545{% endif %};">{{ tendencia_texto|upper }}</span> ({{ tendencia }}%)</p>
+        <p><strong>Mejor centro:</strong> {{ mejor_centro }}</p><p><strong>Cumplimiento de objetivos:</strong> {{ cumplimiento_objetivo }}%</p>
+        <hr style="margin: 20px 0;"><p style="background: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #17a2b8;"><strong>Recomendación:</strong> {% if tendencia_texto == 'mejorando' %}Mantener las buenas prácticas implementadas.{% else %}Revisar procesos y capacitar al equipo.{% endif %}</p>
+    </div></div>
+</section>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% block title %}Alertas y Acciones Pendientes{% endblock %}
+{% block content %}
+<h1>🔔 Alertas y Acciones Pendientes</h1>
+<p class="dashboard-subtitle">Centro de comando operacional</p>
+<section class="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">🔴</div><div class="metric-content"><h3>{{ alertas_criticas|length }}</h3><p>Alertas Críticas</p></div></div>
+    <div class="metric-card"><div class="metric-icon">📋</div><div class="metric-content"><h3>{{ incidencias_pendientes|length }}</h3><p>Incidencias Pendientes</p></div></div>
+    <div class="metric-card"><div class="metric-icon">✅</div><div class="metric-content"><h3>{{ registros_hoy }}</h3><p>Registros Hoy</p></div></div>
+    <div class="metric-card"><div class="metric-icon">⏰</div><div class="metric-content"><h3 id="hora-actual">--:--</h3><p>Hora Actual</p></div></div>
+</section>
+<section class="dashboard-charts-grid">
+    <div class="chart-card"><h3>🔴 Alertas Críticas Activas</h3><div style="overflow-y: auto; max-height: 400px;">
+        {% if alertas_criticas %}<table style="width: 100%; border-collapse: collapse;"><thead style="background: #f8f9fa; position: sticky; top: 0;"><tr><th style="padding: 12px; text-align: left;">Fecha</th><th style="padding: 12px; text-align: left;">Tipo</th><th style="padding: 12px; text-align: left;">Centro</th></tr></thead><tbody>
+        {% for alerta in alertas_criticas %}<tr style="border-bottom: 1px solid #e9ecef; background: #fff3cd;"><td style="padding: 12px;">{{ alerta.fecha_hora|date:"d/m H:i" }}</td><td style="padding: 12px;">{{ alerta.tipo_incidencia }}</td><td style="padding: 12px;">{{ alerta.centro.nombre }}</td></tr>{% endfor %}
+        </tbody></table>{% else %}<p style="text-align: center; padding: 40px; color: #28a745;">✅ No hay alertas críticas activas</p>{% endif %}
+    </div></div>
+    <div class="chart-card"><h3>📋 Incidencias Pendientes (48h)</h3><div style="overflow-y: auto; max-height: 400px;">
+        <table style="width: 100%; border-collapse: collapse;"><thead style="background: #f8f9fa; position: sticky; top: 0;"><tr><th style="padding: 12px; text-align: left;">Fecha</th><th style="padding: 12px; text-align: left;">Tipo</th><th style="padding: 12px; text-align: left;">Módulo</th></tr></thead><tbody>
+        {% for inc in incidencias_pendientes %}<tr style="border-bottom: 1px solid #e9ecef;"><td style="padding: 12px;">{{ inc.fecha_hora|date:"d/m H:i" }}</td><td style="padding: 12px;">{{ inc.tipo_incidencia }}</td><td style="padding: 12px;">{{ inc.modulo }}</td></tr>{% endfor %}
+        </tbody></table>
+    </div></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>function actualizarHora(){const ahora=new Date();document.getElementById('hora-actual').textContent=ahora.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});}actualizarHora();setInterval(actualizarHora,1000);</script>{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'dashboards/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Tendencias y Predicciones{% endblock %}
+
+{% block content %}
+<h1>📈 Tendencias y Predicciones</h1>
+<p class="dashboard-subtitle">Análisis histórico y proyecciones</p>
+
+<section class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon">📊</div>
+        <div class="metric-content">
+            <h3>30</h3>
+            <p>Días Analizados</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">📈</div>
+        <div class="metric-content">
+            <h3 id="tendencia-valor">0%</h3>
+            <p>Tendencia</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">⚠️</div>
+        <div class="metric-content">
+            <h3>{{ anomalias|length }}</h3>
+            <p>Anomalías Detectadas</p>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-icon">🎯</div>
+        <div class="metric-content">
+            <h3 id="promedio-movil">0</h3>
+            <p>Promedio Móvil</p>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-charts-grid">
+    <div class="chart-card">
+        <h3>📈 Tendencia de Incidencias (30 días)</h3>
+        <canvas id="chartTendenciaIncidencias"></canvas>
+    </div>
+    
+    <div class="chart-card">
+        <h3>🌡️ Evolución de Parámetros</h3>
+        <canvas id="chartEvolucionParametros"></canvas>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const tendenciaLabels = {{ tendencia_labels|safe }};
+    const tendenciaData = {{ tendencia_data|safe }};
+    const promedioMovil = {{ promedio_movil|safe }};
+    
+    // Gráfico de tendencia
+    new Chart(document.getElementById('chartTendenciaIncidencias'), {
+        type: 'line',
+        data: {
+            labels: tendenciaLabels,
+            datasets: [{
+                label: 'Incidencias',
+                data: tendenciaData,
+                borderColor: '#17a2b8',
+                backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Promedio Móvil 7 días',
+                data: promedioMovil,
+                borderColor: '#28a745',
+                borderDash: [5, 5],
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+    
+    // Gráfico de parámetros
+    new Chart(document.getElementById('chartEvolucionParametros'), {
+        type: 'line',
+        data: {
+            labels: {{ fechas_parametros|safe }},
+            datasets: [{
+                label: 'Temperatura',
+                data: {{ temp_data|safe }},
+                borderColor: '#dc3545',
+                fill: false
+            }, {
+                label: 'pH',
+                data: {{ ph_data|safe }},
+                borderColor: '#ffc107',
+                fill: false
+            }, {
+                label: 'Oxígeno',
+                data: {{ oxigeno_data|safe }},
+                borderColor: '#17a2b8',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+</script>
+{% endblock %}

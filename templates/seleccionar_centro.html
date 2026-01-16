@@ -80,6 +80,12 @@
         .btn-sj:hover {
             background-color: #218838;
         }
+        .btn-camaras {
+            background-color: #17a2b8; /* Azul turquesa para Cámaras */
+        }
+        .btn-camaras:hover {
+            background-color: #138496;
+        }
     </style>
 </head>
 <body>
@@ -100,6 +106,10 @@
         
         <a href="{% url 'formulario_santa_juana' %}" class="selector-button btn-sj">
             Formulario Santa Juana
+        </a>
+        
+        <a href="{% url 'reporte_camaras' %}" class="selector-button btn-camaras">
+            Reporte de Cámaras
         </a>
     </div>
 </body>
