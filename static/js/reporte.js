@@ -114,65 +114,110 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // --- 6. Lógica de Captura de Pantalla Completa ---
+    // --- 6. Lógica de PDF Completo con Cuadrícula 2x2 ---
     
     const capturaButton = document.getElementById('exportCapturaBtn');
     
     if (capturaButton) {
-        capturaButton.addEventListener('click', function() {
+        capturaButton.addEventListener('click', async function() {
             
             if (typeof html2canvas === 'undefined') {
                 alert('Error: La librería html2canvas no está cargada.');
                 return;
             }
             
+            if (typeof window.jspdf === 'undefined') {
+                alert('Error: La librería jsPDF no está cargada.');
+                return;
+            }
+            
             const allCards = document.querySelectorAll('.incidencia-card-premium');
             
             if (allCards.length === 0) {
-                alert('No hay incidencias para capturar.');
+                alert('No hay incidencias para exportar.');
                 return;
             }
             
             const originalText = capturaButton.innerHTML;
-            capturaButton.innerHTML = '📸 Capturando...';
+            capturaButton.innerHTML = '📋 Generando PDF...';
             capturaButton.disabled = true;
             
-            // Ocultar temporalmente la sidebar para la captura
-            const sidebar = document.querySelector('.sidebar-actions');
-            const originalDisplay = sidebar ? sidebar.style.display : '';
-            if (sidebar) sidebar.style.display = 'none';
-            
-            // Capturar el contenedor del reporte
-            const reporteContainer = document.getElementById('reporte-container');
-            
-            html2canvas(reporteContainer, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            }).then(function(canvas) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait A4
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                
+                // Dimensiones para cuadrícula 2x2
+                const margin = 5;
+                const cardWidth = (pageWidth - (margin * 3)) / 2; // 2 columnas
+                const cardHeight = (pageHeight - (margin * 3)) / 2; // 2 filas
+                
+                // Ocultar temporalmente la sidebar
+                const sidebar = document.querySelector('.sidebar-actions');
+                const originalDisplay = sidebar ? sidebar.style.display : '';
+                if (sidebar) sidebar.style.display = 'none';
+                
+                let cardIndex = 0;
+                let isFirstPage = true;
+                
+                // Procesar cada tarjeta
+                for (let i = 0; i < allCards.length; i++) {
+                    const card = allCards[i];
+                    
+                    // Calcular posición en la cuadrícula (0-3)
+                    const positionInGrid = cardIndex % 4;
+                    
+                    // Si es la primera tarjeta de una nueva página (excepto la primera página)
+                    if (positionInGrid === 0 && !isFirstPage) {
+                        pdf.addPage();
+                    }
+                    
+                    // Capturar la tarjeta como imagen
+                    const canvas = await html2canvas(card, {
+                        scale: 2,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // Calcular posición en la cuadrícula
+                    const col = positionInGrid % 2; // 0 o 1
+                    const row = Math.floor(positionInGrid / 2); // 0 o 1
+                    
+                    const x = margin + (col * (cardWidth + margin));
+                    const y = margin + (row * (cardHeight + margin));
+                    
+                    // Agregar imagen al PDF
+                    pdf.addImage(imgData, 'PNG', x, y, cardWidth, cardHeight);
+                    
+                    cardIndex++;
+                    isFirstPage = false;
+                }
+                
                 // Restaurar sidebar
                 if (sidebar) sidebar.style.display = originalDisplay;
                 
-                // Convertir canvas a imagen y descargar
-                const link = document.createElement('a');
+                // Guardar PDF
                 const fechaArchivo = new Date().toISOString().split('T')[0];
-                link.download = 'Captura_Reporte_Incidencias_' + fechaArchivo + '.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                pdf.save('Reporte_Completo_Incidencias_' + fechaArchivo + '.pdf');
                 
                 capturaButton.innerHTML = originalText;
                 capturaButton.disabled = false;
-            }).catch(function(error) {
-                console.error('Error al capturar:', error);
-                alert('Error al generar la captura de pantalla.');
+                
+            } catch (error) {
+                console.error('Error al generar PDF:', error);
+                alert('Error al generar el PDF completo.');
                 
                 // Restaurar sidebar en caso de error
-                if (sidebar) sidebar.style.display = originalDisplay;
+                const sidebar = document.querySelector('.sidebar-actions');
+                if (sidebar) sidebar.style.display = '';
                 
                 capturaButton.innerHTML = originalText;
                 capturaButton.disabled = false;
-            });
+            }
         });
     }
     
