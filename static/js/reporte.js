@@ -484,11 +484,6 @@ document.addEventListener('DOMContentLoaded', function () {
             
             const allCards = document.querySelectorAll('.incidencia-card-premium');
             
-            if (allCards.length === 0) {
-                alert('No hay incidencias para generar resumen.');
-                return;
-            }
-            
             const originalText = resumenCentrosBtn.innerHTML;
             resumenCentrosBtn.innerHTML = '📊 Generando...';
             resumenCentrosBtn.disabled = true;
@@ -499,34 +494,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 const pageWidth = pdf.internal.pageSize.getWidth();
                 const pageHeight = pdf.internal.pageSize.getHeight();
                 
-                // Agrupar incidencias por centro
+                // Definir los 3 centros PCC obligatorios
+                const centrosPCC = ['Liquiñe', 'Cipreses', 'Trafún'];
                 const centrosData = {};
                 
+                // Inicializar los 3 centros PCC con datos vacíos
+                centrosPCC.forEach(centro => {
+                    centrosData[centro] = { count: 0, tipos: [], estanques: [], turnos: new Set(), operarios: new Set() };
+                });
+                
+                // Agrupar incidencias por centro (solo centros PCC)
                 allCards.forEach(card => {
                     const centroEl = card.querySelector('.centro-nombre');
                     const tipoFallaEl = card.querySelector('.falla-descripcion');
-                    const moduloEl = card.querySelector('.ubicacion-item:nth-child(1) .ubi-value');
                     const estanqueEl = card.querySelector('.ubicacion-item:nth-child(2) .ubi-value');
+                    const turnoEl = card.querySelector('.ubicacion-item:nth-child(3) .ubi-value');
+                    const operarioEl = card.querySelector('.operario-nombre');
                     
-                    const centro = centroEl ? centroEl.textContent.trim() : 'Otro';
+                    const centro = centroEl ? centroEl.textContent.trim() : '';
                     const tipoFalla = tipoFallaEl ? tipoFallaEl.textContent.trim() : 'Sin tipo';
-                    const modulo = moduloEl ? moduloEl.textContent.trim() : '';
                     const estanque = estanqueEl ? estanqueEl.textContent.trim() : '';
+                    const turno = turnoEl ? turnoEl.textContent.trim() : '';
+                    const operario = operarioEl ? operarioEl.textContent.trim() : '';
                     
-                    let ubicacion = '';
-                    if (modulo && modulo !== 'N/A') ubicacion += modulo;
-                    if (estanque && estanque !== 'N/A') ubicacion += (ubicacion ? ' / Est. ' : 'Est. ') + estanque;
-                    
-                    if (!centrosData[centro]) {
-                        centrosData[centro] = { count: 0, tipos: [], ubicaciones: [] };
-                    }
-                    
-                    centrosData[centro].count++;
-                    if (tipoFalla && !centrosData[centro].tipos.includes(tipoFalla)) {
-                        centrosData[centro].tipos.push(tipoFalla);
-                    }
-                    if (ubicacion && !centrosData[centro].ubicaciones.includes(ubicacion)) {
-                        centrosData[centro].ubicaciones.push(ubicacion);
+                    // Solo procesar si el centro es uno de los 3 centros PCC
+                    if (centrosPCC.includes(centro)) {
+                        centrosData[centro].count++;
+                        
+                        if (tipoFalla && !centrosData[centro].tipos.includes(tipoFalla)) {
+                            centrosData[centro].tipos.push(tipoFalla);
+                        }
+                        
+                        if (estanque && estanque !== 'N/A' && !centrosData[centro].estanques.includes(estanque)) {
+                            centrosData[centro].estanques.push(estanque);
+                        }
+                        
+                        if (turno && turno !== 'N/A') {
+                            centrosData[centro].turnos.add(turno);
+                        }
+                        
+                        if (operario && operario !== 'N/A') {
+                            centrosData[centro].operarios.add(operario);
+                        }
                     }
                 });
                 
@@ -541,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFontSize(18);
                 pdf.setFont('helvetica', 'bold');
-                pdf.text('Reporte Diario Control Total', 15, 12);
+                pdf.text('REPORTE DE TURNO MONITOREO PCC', 15, 12);
                 
                 pdf.setFontSize(10);
                 pdf.setFont('helvetica', 'normal');
@@ -550,23 +559,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 const fechaHoy = new Date().toISOString().split('T')[0];
                 pdf.text('Fecha: ' + fechaHoy, pageWidth - 60, 15);
                 
-                // Tarjetas de centros (3 columnas)
+                // Tarjetas de centros (3 columnas - siempre 3 centros)
                 const margin = 10;
                 const gap = 8;
-                const centrosArray = Object.entries(centrosData);
-                const numCentros = centrosArray.length;
-                const cardWidth = (pageWidth - margin * 2 - gap * (Math.min(numCentros, 3) - 1)) / Math.min(numCentros, 3);
+                const cardWidth = (pageWidth - margin * 2 - gap * 2) / 3;
                 const cardHeight = pageHeight - 45;
                 
                 let col = 0;
                 let startY = 32;
                 
-                centrosArray.forEach(([centro, data], index) => {
-                    if (col >= 3) {
-                        col = 0;
-                        pdf.addPage();
-                        startY = 32;
-                    }
+                centrosPCC.forEach((centro, index) => {
+                    const data = centrosData[centro];
                     
                     const x = margin + col * (cardWidth + gap);
                     const y = startY;
@@ -597,10 +600,55 @@ document.addEventListener('DOMContentLoaded', function () {
                     
                     pdf.setFont('helvetica', 'normal');
                     pdf.setFontSize(9);
-                    pdf.text('Se registraron ' + data.count + ' incidencia(s).', x + 5, textY);
-                    textY += 15;
                     
-                    // Fallas/Alarmas
+                    // Si no hay incidencias, mostrar mensaje
+                    if (data.count === 0) {
+                        pdf.text('No se registraron incidencias.', x + 5, textY);
+                        textY += 10;
+                    } else {
+                        pdf.text('Se registraron ' + data.count + ' incidencia(s).', x + 5, textY);
+                        textY += 8;
+                        
+                        // Turno(s)
+                        if (data.turnos.size > 0) {
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.text('Turno: ', x + 5, textY);
+                            pdf.setFont('helvetica', 'normal');
+                            pdf.text(Array.from(data.turnos).join(', '), x + 20, textY);
+                            textY += 5;
+                        }
+                        
+                        // Operario(s)
+                        if (data.operarios.size > 0) {
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.text('Operario: ', x + 5, textY);
+                            pdf.setFont('helvetica', 'normal');
+                            const operariosText = Array.from(data.operarios).join(', ');
+                            pdf.text(operariosText.substring(0, 30), x + 22, textY);
+                            textY += 5;
+                        }
+                        
+                        // Estanques - ARREGLADO para mostrar todos
+                        if (data.estanques.length > 0) {
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.text('Estanques: ', x + 5, textY);
+                            pdf.setFont('helvetica', 'normal');
+                            const estanquesOrdenados = data.estanques.sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+                            const estanquesText = estanquesOrdenados.join(', ');
+                            
+                            // Dividir en multiples lineas si es necesario
+                            const maxWidth = cardWidth - 30;
+                            const lines = pdf.splitTextToSize(estanquesText, maxWidth);
+                            lines.forEach((line, idx) => {
+                                pdf.text(line, x + (idx === 0 ? 25 : 5), textY);
+                                if (idx < lines.length - 1) textY += 4;
+                            });
+                            textY += 5;
+                        }
+                    }
+                    textY += 10;
+                    
+                    // Fallas/Alarmas (solo si hay)
                     if (data.tipos.length > 0) {
                         const boxHeight = Math.min(15 + data.tipos.length * 6, cardHeight - (textY - y) - 10);
                         
